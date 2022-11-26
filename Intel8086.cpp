@@ -1,57 +1,89 @@
 #include "Intel8086.h"
 
+void Intel8086::initializationDeltaTime()
+{
+    this->deltaTime = 0.f;
+}
+
 void Intel8086::initializationGraphicsSettings()
 {
-    this->graphicsSettings = new GraphicsSettings();
+    
 }
 
 void Intel8086::initializationWindow()
 {
-    this->window = new sf::RenderWindow(sf::VideoMode(this->graphicsSettings->windowWidth, this->graphicsSettings->windowHeight), this->graphicsSettings->windowTitle, sf::Style::Close);
-    this->window->setFramerateLimit(this->graphicsSettings->windowFrameRateLimit);
+    this->window.create(sf::VideoMode(this->graphicsSettings.windowWidth, this->graphicsSettings.windowHeight), this->graphicsSettings.windowTitle, sf::Style::Close);
+    this->window.setFramerateLimit(this->graphicsSettings.windowFrameRateLimit);
+
+    this->closeWindow = false;
+}
+
+void Intel8086::initializationMainMenuState()
+{
+    states.push(std::make_shared<MainMenuState>(&window, &states));
+    //states.push(std::make_shared<SimulatorState>(&window));
+}
+
+void Intel8086::updateDeltaTime()
+{
+    this->deltaTime = deltaTimeClock.restart().asSeconds();
 }
 
 void Intel8086::updateSFMLEvents()
 {
-    while (this->window->pollEvent(this->SFMLEvent))
+    //while (this->states->top()->getWindow().pollEvent(this->SFMLEvent))
+    while (this->states.top()->getWindow()->pollEvent(this->SFMLEvent))
         if (this->SFMLEvent.type == sf::Event::Closed)
-            this->window->close();
+        {
+            // this->states.top()->endState();
+            this->closeWindow = true;
+        }
+
+    if (this->states.empty())
+        std::cout << "STATES_EMPTY" << "\n";
 }
 
 void Intel8086::update()
 {
+    this->updateDeltaTime();
+
     this->updateSFMLEvents();
+
+    if (!this->states.empty())
+    {
+        if (this->states.top()->getWindow()->hasFocus())
+        {
+            this->states.top()->update(this->deltaTime);
+
+            if (this->states.top()->getQuit() || this->closeWindow)
+            {
+                this->states.pop();
+            }
+        }
+    }
 }
 
 void Intel8086::render()
 {
-    this->window->clear();
+    this->window.clear();
 
-    sf::RectangleShape shape;
-    shape.setFillColor(sf::Color::Blue);
-    shape.setSize(sf::Vector2f(300.f, 300.f));
-    shape.setPosition(100, 100);
+    if(!this->states.empty())
+        this->states.top()->render();
 
-    this->window->draw(shape);
-
-    this->window->display();
+    this->window.display();
 }
 
 Intel8086::Intel8086()
 {
+    initializationDeltaTime();
     initializationGraphicsSettings();
     initializationWindow();
-}
-
-Intel8086::~Intel8086()
-{
-    delete this->graphicsSettings;
-    delete this->window;
+    initializationMainMenuState();
 }
 
 void Intel8086::run()
 {
-    while (this->window->isOpen())
+    while (!this->states.empty())
     {
         this->update();
         this->render();
