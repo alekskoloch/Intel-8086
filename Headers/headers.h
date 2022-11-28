@@ -4,6 +4,7 @@
 #include <vector>
 #include <stack>
 #include <fstream>
+#include <sstream>
 #include <bitset>
 
 //SFML

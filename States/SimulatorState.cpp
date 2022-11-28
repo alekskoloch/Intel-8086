@@ -29,6 +29,11 @@ void SimulatorState::initializationBackground()
     this->setBackgroundTexture();
 }
 
+void SimulatorState::initializationdisplayMethodDropDownList()
+{
+    this->displayMethodDropDownList = std::make_unique<GUI::DropDownList>(this->getWindow());
+}
+
 void SimulatorState::initializationAssistant()
 {
     this->assistant = std::make_unique<GUI::Assistant>(this->getWindow());
@@ -40,6 +45,9 @@ void SimulatorState::initializationRegistry()
 
     for (int i = 0; i < this->registryLabels.size(); i++)
         this->registry.push_back(std::make_unique<Registry>(this->getWindow(), i <= 3 ? 100.f : 350.f, 100.f * ((i % 4) + 1), this->registryLabels[i], i));
+
+    this->registry.push_back(std::make_unique<Registry>(this->getWindow(), 350.f, 505.f, "MEMORY", 0));
+    this->registry[8]->setColor(sf::Color(150,100,30,255));
 }
 
 void SimulatorState::initializationOperationButtonsLabels()
@@ -52,9 +60,7 @@ void SimulatorState::initializationButtons()
     for (int i = 0; i < this->operationButtonsLabels.size(); i++)
         this->buttons.push_back(std::make_unique<GUI::Button>(this->getWindow(), ButtonStyle::OPAQUE, 900.f, 100.f * (i + 1), this->operationButtonsLabels[i]));
 
-    this->buttonsDisplayMethod.push_back(std::make_unique<GUI::Button>(this->getWindow(), ButtonStyle::OPAQUE, 100.f, 1240.f, "Binary"));
-    this->buttonsDisplayMethod.push_back(std::make_unique<GUI::Button>(this->getWindow(), ButtonStyle::OPAQUE, 550.f, 1240.f, "Decimal"));
-    this->buttonsDisplayMethod.push_back(std::make_unique<GUI::Button>(this->getWindow(), ButtonStyle::OPAQUE, 1000.f, 1240.f, "Hexadecimal"));
+    this->addressButton = std::make_unique<GUI::Button>(this->getWindow(), ButtonStyle::OPAQUE, 100, 500, "Address");
 }
 
 void SimulatorState::initializationOrder()
@@ -69,13 +75,19 @@ void SimulatorState::initializationOrder()
 void SimulatorState::initializationVariables()
 {
     this->initializationBackground();
+    this->initializationdisplayMethodDropDownList();
     this->initializationAssistant();
     this->initializationRegistry();
     this->initializationOperationButtonsLabels();
     this->initializationButtons();
     this->initializationOrder();
 
+    this->memoryBus = std::make_unique<MemoryBus>();
+    this->addressEnter = false;
+
+
     this->clickTime = 0;
+    this->textStream = std::make_unique<GUI::TextStream>(this->getWindow());
 }
 
 void SimulatorState::updateOrder(const float & dt)
@@ -254,110 +266,113 @@ void SimulatorState::update(const float & dt)
 
     for (int i = 0; i < this->buttons.size(); i++)
         this->buttons[i]->update(dt);
-    
-    for (int i = 0; i < this->buttonsDisplayMethod.size(); i++)
-        this->buttonsDisplayMethod[i]->update(dt);
 
-    if (!this->isAnyButtonUse() && !this->isAnyRegistryActive())
+    if (this->addressButton->getActive())
+        this->addressButton->use(true);
+
+    if (!this->isAnyButtonUse() && !this->isAnyRegistryActive() && !this->addressButton->getUse() && !this->registry[8]->getActive())
     {
+        this->textStream->activeTextStream(false);
         for (int i = 0; i < this->buttons.size(); i++)
             this->buttons[i]->setAvailability(true);
         this->isOrder = false;
         this->order = Order::IDLE;
-        this->assistant->setText("Select an instruction");
+        this->assistant->setText("Select registry or an instruction");
+    }
+    else if (!this->isAnyButtonUse() && !this->addressButton->getUse() && this->registry[8]->getActive())
+    {
+        for (int i = 0; i < this->buttons.size(); i++)
+            this->buttons[i]->setAvailability(false);
+        this->textStream->activeTextStream(2);
+        this->assistant->setText("Enter data to save in memory: " + this->textStream->getText());
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Enter))
+        {
+            if (this->addressButton->getString().size() == 4)
+            {
+                this->registry[8]->setData(this->textStream->getText());
+                this->memoryBus->setValue(this->addressButton->getString(), this->registry[8]->getData());
+            }     
+
+            this->registry[8]->deactive();
+
+            this->textStream->clear();          
+        }
+    }
+    else if (!this->isAnyButtonUse() && !this->isAnyRegistryActive() && this->addressButton->getUse())
+    {
+        for (int i = 0; i < this->buttons.size(); i++)
+            this->buttons[i]->setAvailability(false);
+        this->textStream->activeTextStream(4);
+        this->assistant->setText("Enter address (enter to confirm): " + this->textStream->getText());
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Enter))
+        {
+            std::string result = this->textStream->getText();
+
+            if (result.size() != 4)
+                for (int i = 0; i < 4 - this->textStream->getText().size(); i++)
+                    result.insert(0, 1, '0');
+                    
+
+            this->registry[8]->setData(this->memoryBus->getValue(result));
+            this->addressButton->setString(result);
+            this->addressButton->use(false);
+            this->textStream->clear();            
+        }
+    }
+    else if (!this->isAnyButtonUse() && this->isAnyRegistryActive())
+    {
+        for (int i = 0; i < this->buttons.size(); i++)
+            this->buttons[i]->setAvailability(false);
+        this->textStream->activeTextStream(2);
+        this->assistant->setText("Enter a hexadecimal value (enter to confirm): " + this->textStream->getText());
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Enter))
+        {
+            if (this->addressButton->getString() != "Address")
+            {
+                this->memoryBus->setValue(this->addressButton->getString(), this->registry[8]->getData());
+            }      
+
+            for (int i = 0; i < this->registry.size(); i++)
+                if (this->registry[i]->getActive())
+                    this->registry[i]->setData(this->textStream->getText());
+
+            this->textStream->clear();
+            for (int i = 0; i < this->registry.size(); i++)
+                this->registry[i]->deactive();            
+        }
     }
     else
     {
+        this->textStream->activeTextStream(false);
         for (int i = 0; i < this->buttons.size(); i++)
             this->buttons[i]->setAvailability(false);
     }
 
-    if (this->buttons[0]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::MOV;
-        this->isOrder = true;
-        this->buttons[0]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[1]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::XCHN;
-        this->isOrder = true;
-        this->buttons[1]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[2]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::NOT;
-        this->isOrder = true;
-        this->buttons[2]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[3]->getActive() && this->letOnClick())
-    {
-        this->order = Order::INC;
-        this->isOrder = true;
-        this->buttons[3]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[4]->getActive() && this->letOnClick())
-    {
-        this->order = Order::DEC;
-        this->isOrder = true;
-        this->buttons[4]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[5]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::AND;
-        this->isOrder = true;
-        this->buttons[5]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[6]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::OR;
-        this->isOrder = true;
-        this->buttons[6]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[7]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::XOR;
-        this->isOrder = true;
-        this->buttons[7]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[8]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::ADD;
-        this->isOrder = true;
-        this->buttons[8]->use(true);
-        this->assistant->setText("Select the target register");
-    }
-    else if (this->buttons[9]->getActive())
-    {
-        this->deactiveAllRegistry();
-        this->order = Order::SUB;
-        this->isOrder = true;
-        this->buttons[9]->use(true);
-        this->assistant->setText("Select the target register");
-    }
+    for (int i = 0; i < this->buttons.size(); i++)
+        if (this->buttons[i]->getActive())
+        {
+            this->deactiveAllRegistry();
+            this->order = Order(i + 1);
+            this->isOrder = true;
+            this->buttons[i]->use(true);
+            this->assistant->setText("Select the target register");
+        }
 
-    if (this->buttonsDisplayMethod[0]->getActive() && this->letOnClick())
+    if (this->displayMethodDropDownList->getState() == 1)
         this->setDisplayMethod(DisplayMethod::BIN);
-    else if (this->buttonsDisplayMethod[1]->getActive() && this->letOnClick())
+    else if (this->displayMethodDropDownList->getState() == 2)
         this->setDisplayMethod(DisplayMethod::DEC);
-    else if (this->buttonsDisplayMethod[2]->getActive() && this->letOnClick())
+    else if (this->displayMethodDropDownList->getState() == 3)
         this->setDisplayMethod(DisplayMethod::HEX);
 
+    this->displayMethodDropDownList->update(dt);
+
+    this->textStream->update(dt);
+
+    this->addressButton->update(dt);
 
     if (isOrder)
         this->updateOrder(dt);
@@ -376,16 +391,9 @@ void SimulatorState::render()
     for (int i = 0; i < this->buttons.size(); i++)
         this->buttons[i]->render();
     
-    for (int i = 0; i < this->buttonsDisplayMethod.size(); i++)
-        this->buttonsDisplayMethod[i]->render();
+    this->addressButton->render();
 
     this->assistant->render();
-}
 
-//test function TEST
-void SimulatorState::clear()
-{
-    for (int i = 0; i < this->registry.size(); i++)
-        if (this->registry[i]->getActive())
-            this->registry[i]->setData(0);
+    this->displayMethodDropDownList->render();
 }

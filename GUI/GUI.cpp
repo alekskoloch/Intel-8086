@@ -25,9 +25,9 @@ void GUI::Button::initButtonShape()
     }
 }
 
-void GUI::Button::initButtonText()
+void GUI::Button::initButtonText(std::string string)
 {
-    this->buttonText.setString(this->buttonString);
+    this->buttonText.setString(string);
     this->buttonText.setFont(this->font);
     this->buttonText.setStyle(sf::Text::Bold);
 
@@ -128,7 +128,6 @@ void GUI::Button::initVariables()
 {
     initFont();
     initButtonShape();
-    initButtonText();
 
     this->animationTimer = 0;
 
@@ -146,9 +145,8 @@ GUI::Button::Button(sf::RenderWindow * window, ButtonStyle buttonStyle, float po
     this->availability = true;
     this->inUse = false;
 
-    this->buttonString = buttonString;
-
-    initVariables();
+    this->initVariables();
+    this->initButtonText(buttonString);
 }
 
 bool GUI::Button::getActive()
@@ -164,6 +162,16 @@ bool GUI::Button::getAvailability()
 void GUI::Button::setAvailability(bool availability)
 {
     this->availability = availability;
+}
+
+void GUI::Button::setString(std::string string)
+{
+    this->buttonText.setString(string);
+}
+
+std::string GUI::Button::getString()
+{
+    return this->buttonText.getString();
 }
 
 void GUI::Button::use(bool inUse)
@@ -224,6 +232,83 @@ void GUI::Button::render()
     this->window->draw(buttonText);
 }
 
+// DorpDownList
+
+void GUI::DropDownList::initializationClock()
+{
+    this->clock = 0.f;
+}
+
+void GUI::DropDownList::initializationListButtons()
+{
+    this->listButtons.push_back(std::make_unique<Button>(this->window, ButtonStyle::OPAQUE, 100.f, 1000.f, "BIN"));
+    this->listButtons.push_back(std::make_unique<Button>(this->window, ButtonStyle::OPAQUE, 100.f, 930.f, "DEC"));
+    this->listButtons.push_back(std::make_unique<Button>(this->window, ButtonStyle::OPAQUE, 100.f, 860.f, "HEX"));
+}
+
+void GUI::DropDownList::initializationVariables()
+{
+    this->listButton = std::make_unique<Button>(this->window, ButtonStyle::OPAQUE, 100.f, 1000.f, "DISPLAY AS");
+
+    this->initializationListButtons();
+    this->initializationClock();
+
+    this->active = false;
+}
+
+GUI::DropDownList::DropDownList(sf::RenderWindow * window)
+{
+    this->window = window;
+
+    this->state = 3;
+
+    this->initializationVariables();
+}
+
+int GUI::DropDownList::getState()
+{
+    return this->state;
+}
+
+void GUI::DropDownList::update(const float & dt)
+{
+    if (!active)
+        this->listButton->update(dt);
+
+    if (this->listButton->getActive() && !this->active && this->clock >= 0.3)
+    {
+        this->clock = 0;
+        this->active = true;
+    }
+
+    if (active)
+        for (int i = 0; i < this->listButtons.size(); i++)
+            this->listButtons[i]->update(dt);
+
+    if (active)
+        for (int i = 0; i < this->listButtons.size(); i++)
+            if(this->listButtons[i]->getActive() && this->clock >= 0.3f)
+            {
+                this->state = 1 + i;
+                this->clock = 0;
+                this->active = false;
+            }
+
+    if (this->clock <= 1.f)
+        this->clock += dt;
+}
+
+void GUI::DropDownList::render()
+{
+    if (!active)
+        this->listButton->render();
+
+    if (active)
+        for (int i = 0; i < this->listButtons.size(); i++)
+            this->listButtons[i]->render();
+}
+
+
 // Assistant
 
 void GUI::Assistant::initializationFont()
@@ -235,7 +320,7 @@ void GUI::Assistant::initializationAssistantShape()
 {
     this->assistantShape.setPosition(0.f, 1200.f);
     this->assistantShape.setSize(sf::Vector2f(1400.f, 200.f));
-    this->assistantShape.setFillColor(sf::Color(10,10,15,220));
+    this->assistantShape.setFillColor(sf::Color(10,10,15,255));
     this->assistantShape.setOutlineThickness(4.f);
     this->assistantShape.setOutlineColor(sf::Color(30,200,225,255));
 }
@@ -276,4 +361,145 @@ void GUI::Assistant::render()
 {
     this->window->draw(this->assistantShape);
     this->window->draw(this->assistantText);
+}
+
+// TextStream
+void GUI::TextStream::initializationVariables()
+{
+    this->text = "";
+    this->active= false;
+
+    this->maxChar = 0;
+
+    this->clock = 0;
+}
+
+std::string GUI::TextStream::getText()
+{
+    return this->text;
+}
+
+void GUI::TextStream::activeTextStream(unsigned int maxChar, bool b)
+{
+    this->active = b;
+
+    this->maxChar = maxChar;
+
+    if (b == false)
+        this->text = "";
+}
+
+void GUI::TextStream::clear()
+{
+    this->text = "";
+    this->active = false;
+}
+
+GUI::TextStream::TextStream(sf::RenderWindow * window)
+{
+    this->window = window;
+
+    this->initializationVariables();
+}
+
+void GUI::TextStream::update(const float & dt)
+{
+    if (clock <= 0.2f)
+        clock += dt;
+
+    if (this->active)
+    {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape) || sf::Mouse::isButtonPressed(sf::Mouse::Left))
+            this->active = false;
+
+        if (this->text.size() < this->maxChar)
+        {
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num0) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "0";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num1) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "1";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "2";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num3) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "3";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num4) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "4";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num5) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "5";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num6) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "6";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num7) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "7";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num8) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "8";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num9) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "9";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "A";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::B) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "B";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::C) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "C";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "D";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::E) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "E";
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F) && this->clock >= 0.2f)
+            {
+                this->clock = 0.f;
+                this->text += "F";
+            }
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::BackSpace) && this->clock >= 0.2f)
+        {
+            this->clock = 0.f;
+            if (this->text.size() > 0)
+                this->text = this->text.substr(0, this->text.size()-1);
+        }
+    }
 }

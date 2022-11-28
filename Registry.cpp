@@ -38,11 +38,18 @@ void Registry::initializationShape()
     this->text.setFillColor(sf::Color::Black);
     this->text.setCharacterSize(24);
     this->text.setPosition(this->shape.getPosition().x + this->text.getGlobalBounds().width / 2,  this->shape.getPosition().y + ((this->shape.getSize().y / 2) - 18.f));
+    
+    this->textLabel.setFillColor(sf::Color::Black);
+    this->textLabel.setString(this->label);
+    this->textLabel.setFont(this->font);
+    this->textLabel.setStyle(sf::Text::Regular);
+    this->textLabel.setCharacterSize(14);
+    this->textLabel.setPosition(this->shape.getPosition().x + (this->shape.getSize().x - (this->textLabel.getGlobalBounds().width + 4.f)), this->shape.getPosition().y + 2.f);
 }
 
 void Registry::styleIdle()
 {
-    this->shape.setFillColor(sf::Color(255, 255, 255, 200));
+    this->shape.setFillColor(this->color);
 }
 
 void Registry::styleHover()
@@ -123,6 +130,8 @@ Registry::Registry(sf::RenderWindow * window, float posX, float posY, std::strin
 
     this->label = label;
 
+    this->color = sf::Color(255, 255, 255, 200);
+
     initializationFont();
     initializationShape();
     initializationVariables();
@@ -144,6 +153,26 @@ void Registry::setData(unsigned char value)
         this->text.setString(this->dataAsHexString());
 }
 
+void Registry::setData(std::string value)
+{
+    unsigned int result; 
+    std::stringstream ss;
+
+    if (value == "")
+        value = "0";
+
+    ss << std::hex << value;
+    ss >> result;
+
+    this->data = static_cast<int>(result);
+    if (this->displayMethod == DisplayMethod::BIN)
+        this->text.setString(this->dataAsBinString());
+    else if (this->displayMethod == DisplayMethod::DEC)
+        this->text.setString(this->dataAsDecString());
+    else if (this->displayMethod == DisplayMethod::HEX)
+        this->text.setString(this->dataAsHexString());
+}
+
 void Registry::setDataDisplay(DisplayMethod display)
 {
     this->displayMethod = display;
@@ -155,6 +184,11 @@ void Registry::setDataDisplay(DisplayMethod display)
         this->text.setString(this->dataAsHexString());
 }
 
+void Registry::setColor(sf::Color color)
+{
+    this->color = color;
+}
+
 bool Registry::getActive()
 {
     return this->isActive;
@@ -162,7 +196,6 @@ bool Registry::getActive()
 
 void Registry::deactive()
 {
-    std::cout << "DEACTIVE\n";
     this->isActive = false;
 }
 
@@ -174,7 +207,6 @@ void Registry::update(const float & dt)
 
         if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && !this->isActive && this->letOnClick())
         {
-            std::cout << "ACTIVE\n";
             this->isActive = true;
         }
 
@@ -210,5 +242,6 @@ void Registry::render()
 {
     this->window->draw(this->shape);
     this->window->draw(this->text);
+    this->window->draw(this->textLabel);
 }
 

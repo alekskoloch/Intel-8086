@@ -25,6 +25,9 @@ private:
     sf::RectangleShape shape;
     sf::Font font;
     sf::Text text;
+    sf::Text textLabel;
+
+    sf::Color color;
 
     void initializationFont();
     void initializationShape();
@@ -46,7 +49,10 @@ public:
 
     unsigned char getData();
     void setData(unsigned char value);
+    void setData(std::string value);
     void setDataDisplay(DisplayMethod display);
+
+    void setColor(sf::Color color);
 
     bool getActive();
     void deactive();

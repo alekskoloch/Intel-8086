@@ -21,8 +21,6 @@ namespace GUI
         sf::RectangleShape buttonShape;
         sf::Text buttonText;
 
-        std::string buttonString;
-
         bool availability;
         bool inUse;
 
@@ -33,7 +31,7 @@ namespace GUI
 
         void initFont();
         void initButtonShape();
-        void initButtonText();
+        void initButtonText(std::string string);
 
         void styleIdleAvailable(const float & dt);
         void styleIdleNotAvailable(const float & dt);
@@ -47,6 +45,8 @@ namespace GUI
         bool getActive();
         bool getAvailability();
         void setAvailability(bool availability);
+        void setString(std::string string);
+        std::string getString();
         void use(bool inUse);
         bool getUse();
 
@@ -54,6 +54,31 @@ namespace GUI
         void render();
     };
     
+    class DropDownList
+    {
+    private:
+        float clock;
+        int state;
+
+        sf::RenderWindow * window;
+        std::unique_ptr<std::vector<Button>> dropDownList;
+        std::vector<std::unique_ptr<Button>> listButtons;
+        std::unique_ptr<Button> listButton; 
+
+        bool active;
+
+        void initializationVariables();
+        void initializationClock();
+        void initializationListButtons();
+    public:
+        DropDownList(sf::RenderWindow * window);
+
+        int getState();
+
+        void update(const float & dt);
+        void render();
+    };
+
     class Assistant
     {
     private:
@@ -78,4 +103,29 @@ namespace GUI
 
     };
     
+    class TextStream
+    {
+    private:
+        sf::RenderWindow * window;
+        std::string text;
+
+        unsigned int maxChar;
+
+        float clock;
+
+        bool active;
+
+        void initializationVariables();
+
+    public:
+        TextStream(sf::RenderWindow * window);
+
+        std::string getText();
+        void activeTextStream(unsigned int maxChar, bool b = true);
+
+        void clear();
+
+        void update(const float & dt);
+        void render();
+    };
 }
