@@ -47,6 +47,7 @@ private:
 
     Order order;
     bool isOrder;
+    bool saveData;
     int first;
     int second;
     void updateOrder(const float & dt);

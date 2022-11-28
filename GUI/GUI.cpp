@@ -248,7 +248,7 @@ void GUI::DropDownList::initializationListButtons()
 
 void GUI::DropDownList::initializationVariables()
 {
-    this->listButton = std::make_unique<Button>(this->window, ButtonStyle::OPAQUE, 100.f, 1000.f, "DISPLAY AS");
+    this->listButton = std::make_unique<Button>(this->window, ButtonStyle::OPAQUE, 100.f, 1000.f, "DISPLAY");
 
     this->initializationListButtons();
     this->initializationClock();

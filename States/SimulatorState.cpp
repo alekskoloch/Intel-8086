@@ -44,7 +44,7 @@ void SimulatorState::initializationRegistry()
     this->registryLabels = {"AL", "BL", "CL", "DL", "AH", "BH", "CH", "DH"};
 
     for (int i = 0; i < this->registryLabels.size(); i++)
-        this->registry.push_back(std::make_unique<Registry>(this->getWindow(), i <= 3 ? 100.f : 350.f, 100.f * ((i % 4) + 1), this->registryLabels[i], i));
+        this->registry.push_back(std::make_unique<Registry>(this->getWindow(), i <= 3 ? 100.f : 350.f, 100.f * ((i % 4) + 1), this->registryLabels[i], 0));
 
     this->registry.push_back(std::make_unique<Registry>(this->getWindow(), 350.f, 505.f, "MEMORY", 0));
     this->registry[8]->setColor(sf::Color(150,100,30,255));
@@ -85,6 +85,7 @@ void SimulatorState::initializationVariables()
     this->memoryBus = std::make_unique<MemoryBus>();
     this->addressEnter = false;
 
+    this->saveData = false;
 
     this->clickTime = 0;
     this->textStream = std::make_unique<GUI::TextStream>(this->getWindow());
@@ -116,6 +117,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->buttons[0]->use(false);
             this->first = -1;
             this->second = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::XCHN)
         {
@@ -129,6 +131,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->buttons[1]->use(false);
             this->first = -1;
             this->second = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::AND)
         {
@@ -140,6 +143,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->buttons[5]->use(false);
             this->first = -1;
             this->second = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::OR)
         {
@@ -151,6 +155,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->buttons[6]->use(false);
             this->first = -1;
             this->second = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::XOR)
         {
@@ -162,6 +167,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->buttons[7]->use(false);
             this->first = -1;
             this->second = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::ADD)
         {
@@ -174,6 +180,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->buttons[8]->use(false);
             this->first = -1;
             this->second = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::SUB)
         {
@@ -185,6 +192,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->buttons[9]->use(false);
             this->first = -1;
             this->second = -1;
+            this->saveData = true;
         }
     }
     else if (this->first != -1 && this->second == -1)
@@ -198,6 +206,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->isOrder = false;
             this->buttons[2]->use(false);
             this->first = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::INC)
         {
@@ -208,6 +217,7 @@ void SimulatorState::updateOrder(const float & dt)
             this->isOrder = false;
             this->buttons[3]->use(false);
             this->first = -1;
+            this->saveData = true;
         }
         else if (this->order == Order::DEC)
         {
@@ -218,8 +228,15 @@ void SimulatorState::updateOrder(const float & dt)
             this->isOrder = false;
             this->buttons[4]->use(false);
             this->first = -1;
+            this->saveData = true;
         }
     }
+
+    if (this->addressButton->getString().size() == 4 && this->saveData)
+    {
+        this->memoryBus->setValue(this->addressButton->getString(), this->registry[8]->getData());
+        this->saveData = false;
+    }     
 }
 
 void SimulatorState::deactiveAllRegistry()
@@ -261,8 +278,12 @@ void SimulatorState::update(const float & dt)
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
         this->endState();
 
-    for (int i = 0; i < this->registry.size(); i++)
-        this->registry[i]->update(dt);
+    if (this->addressButton->getString() == "Address")
+        for (int i = 0; i < this->registry.size() - 1; i++)
+            this->registry[i]->update(dt);
+    else
+        for (int i = 0; i < this->registry.size(); i++)
+            this->registry[i]->update(dt);
 
     for (int i = 0; i < this->buttons.size(); i++)
         this->buttons[i]->update(dt);
@@ -277,7 +298,10 @@ void SimulatorState::update(const float & dt)
             this->buttons[i]->setAvailability(true);
         this->isOrder = false;
         this->order = Order::IDLE;
-        this->assistant->setText("Select registry or an instruction");
+        if (this->addressButton->getString() == "Address")
+            this->assistant->setText("Select registry or an instruction or enter address");
+        else
+            this->assistant->setText("Select registry or an instruction");
     }
     else if (!this->isAnyButtonUse() && !this->addressButton->getUse() && this->registry[8]->getActive())
     {
@@ -385,8 +409,12 @@ void SimulatorState::render()
 {   
     this->getWindow()->draw(background);
 
-    for (int i = 0; i < this->registry.size(); i++)
-        this->registry[i]->render();
+    if (this->addressButton->getString() == "Address")
+        for (int i = 0; i < this->registry.size() - 1; i++)
+            this->registry[i]->render();
+    else
+        for (int i = 0; i < this->registry.size(); i++)
+            this->registry[i]->render();
 
     for (int i = 0; i < this->buttons.size(); i++)
         this->buttons[i]->render();
