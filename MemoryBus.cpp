@@ -37,14 +37,11 @@ void MemoryBus::setValue(std::string address, char value)
     ss << std::hex << address;
     ss >> result;
 
-    std::cout << "SAVE VALUE: " << value << "\n";
-
     this->memoryBus->at(result) = value;
 }
 
 MemoryBus::MemoryBus()
 {
-    std::cout << "BOOM" << std::endl;
     this->maxMemory = 65535;
     this->initializationVariables();
 }

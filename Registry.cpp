@@ -197,6 +197,7 @@ bool Registry::getActive()
 void Registry::deactive()
 {
     this->isActive = false;
+    this->registryStatus = RegistryStatus::IDLE;
 }
 
 void Registry::update(const float & dt)

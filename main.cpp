@@ -6,6 +6,5 @@ int main()
     Intel8086 intel8086;
     intel8086.run();
 
-    std::cout << "EXIT_SUCCES" << "\n";
     return EXIT_SUCCESS;
 }

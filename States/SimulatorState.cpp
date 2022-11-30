@@ -93,6 +93,12 @@ void SimulatorState::initializationVariables()
 
 void SimulatorState::updateOrder(const float & dt)
 {
+    if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+    {
+        this->first = -1;
+        this->second = -1;
+    }
+
     if (this->second == -1)
         for (int i = 0; i < this->registry.size(); i++)
             if (this->registry[i]->getActive() && this->first == -1)
@@ -315,10 +321,15 @@ void SimulatorState::update(const float & dt)
             if (this->addressButton->getString().size() == 4)
             {
                 this->registry[8]->setData(this->textStream->getText());
+                for (int i = 0; i < this->registry.size() - 1; i++)
+                    if (this->registry[i]->getActive())
+                        this->registry[i]->setData(this->textStream->getText());
                 this->memoryBus->setValue(this->addressButton->getString(), this->registry[8]->getData());
             }     
 
-            this->registry[8]->deactive();
+            for (int i = 0; i < this->registry.size(); i++)
+                if (this->registry[i]->getActive())
+                    this->registry[i]->deactive();
 
             this->textStream->clear();          
         }
